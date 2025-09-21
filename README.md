@@ -38,6 +38,18 @@ The project is broken down into four key milestones:
 3.  **Full-Resolution Generation:** Scale the generator to the full 256x256 resolution and verify its ability to produce visually coherent human faces.
 4.  **Initial Text-Conditioning:** Implement basic text-based control using CLIP to demonstrate the model's controllability.
 
+## Progress
+
+### Milestone 1: DINOv2 Feature Pyramid Pre-computation (Complete)
+
+We have successfully built and validated the complete data preprocessing pipeline. This includes scripts to automatically download and crop test images, a core script to process them through DINOv2 to generate multi-scale feature pyramids, and a visualization script to confirm the results.
+
+The visualizations show a clear semantic correspondence between the original image and its feature representations at different scales, validating our approach. For a detailed technical plan of this milestone, see **[docs/01-feature-pyramid.md](docs/01-feature-pyramid.md)**.
+
+**Example Visualization:**
+*(Original Image | 4x4 Features | 8x8 Features | 16x16 Features)*
+![Example Visualization](examples/visualizations/test_image_01.png)
+
 ## Project Structure
 
 The repository is organized to ensure clarity and reproducibility:

@@ -4,3 +4,6 @@ accelerate
 tqdm
 pytest
 Pillow
+mtcnn
+tensorflow
+scikit-learn

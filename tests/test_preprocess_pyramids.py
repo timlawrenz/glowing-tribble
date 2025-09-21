@@ -37,6 +37,7 @@ def precomputed_pyramid(tmpdir_factory):
     
     # We only care about the features for the single image in the batch
     single_pyramid = {key: val[0] for key, val in pyramid.items()}
+    single_pyramid['cls_token'] = torch.randn(embedding_dim)
 
     # Save it to a temporary file
     pyramid_dir = Path(tmpdir_factory.mktemp("pyramids"))
@@ -71,7 +72,7 @@ def test_pyramid_format_and_structure(precomputed_pyramid):
     
     assert isinstance(loaded_pyramid, dict), "Pyramid should be a dictionary."
     
-    expected_keys = ['4x4', '8x8', '16x16']
+    expected_keys = ['cls_token', '4x4', '8x8', '16x16']
     assert sorted(list(loaded_pyramid.keys())) == sorted(expected_keys), f"Pyramid keys do not match expected keys: {expected_keys}"
     
     for key in expected_keys:
@@ -85,6 +86,7 @@ def test_pyramid_tensor_shapes_and_types(precomputed_pyramid):
     embedding_dim = 768 # For DINOv2-base
 
     expected_shapes = {
+        'cls_token': (embedding_dim,),
         '4x4': (4 * 4, embedding_dim),
         '8x8': (8 * 8, embedding_dim),
         '16x16': (16 * 16, embedding_dim)

@@ -20,8 +20,12 @@ class ImageDataset(Dataset):
         image_path = self.image_paths[idx]
         image = Image.open(image_path).convert("RGB")
         if self.transform:
-            image = self.transform(image, return_tensors="pt")
-        return image, image_path.name
+            processed_image = self.transform(image, return_tensors="pt")
+        
+        return {
+            "pixel_values": processed_image["pixel_values"][0], 
+            "filename": image_path.name
+        }
 
 def get_model_and_processor():
     """Loads the DINOv2 model and image processor from Hugging Face."""
@@ -82,10 +86,7 @@ def main():
     model, processor, device = get_model_and_processor()
 
     # --- Dataset and DataLoader ---
-    # We pass the processor directly to the dataset now
     dataset = ImageDataset(RAW_IMAGE_DIR, transform=processor)
-    # We can't batch images and filenames separately like this easily.
-    # Let's handle filenames inside the loop.
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     print(f"Found {len(dataset)} images to process.")
@@ -93,13 +94,18 @@ def main():
     # --- Processing Loop ---
     print("Starting feature pyramid extraction...")
     with torch.no_grad():
-        for i, (batch, filenames) in enumerate(tqdm(dataloader)):
-            inputs = batch['pixel_values'][0].to(device)
+        for batch in tqdm(dataloader):
+            inputs = batch['pixel_values'].to(device)
+            filenames = batch['filename']
 
             # Get patch embeddings from DINOv2
             outputs = model(inputs, output_hidden_states=True)
-            # The last hidden state contains the patch embeddings
-            patch_embeddings = outputs.last_hidden_state
+            # The last hidden state contains the patch embeddings + [CLS] token
+            all_embeddings = outputs.last_hidden_state
+
+            # Separate the [CLS] token and the patch embeddings
+            cls_token = all_embeddings[:, 0, :]
+            patch_embeddings = all_embeddings[:, 1:, :]
 
             # Construct the feature pyramid for each item in the batch
             pyramids = construct_feature_pyramid(patch_embeddings, target_scales=PYRAMID_SCALES)
@@ -107,6 +113,7 @@ def main():
             # Save each pyramid to a file
             for j in range(patch_embeddings.size(0)):
                 single_pyramid = {key: val[j] for key, val in pyramids.items()}
+                single_pyramid['cls_token'] = cls_token[j]
                 output_filename = Path(filenames[j]).with_suffix(".pt")
                 torch.save(single_pyramid, OUTPUT_DIR / output_filename)
 
