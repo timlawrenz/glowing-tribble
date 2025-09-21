@@ -8,3 +8,4 @@ mtcnn
 tensorflow
 scikit-learn
 torchvision
+matplotlib

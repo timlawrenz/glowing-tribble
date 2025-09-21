@@ -7,6 +7,7 @@ from tqdm import tqdm
 from torchvision.transforms import Normalize
 from torchvision.utils import save_image
 from transformers import Dinov2Model
+import matplotlib.pyplot as plt
 
 # --- 1. Dataset ---
 class FeaturePyramidDataset(Dataset):
@@ -111,8 +112,10 @@ def train():
     optimizer = optim.Adam(generator.parameters(), lr=LEARNING_RATE)
     criterion = nn.MSELoss()
 
-    # Load the frozen DINOv2 model to use as the loss network
+    # Load the frozen DINOv2 model and freeze its weights
     dino_model = Dinov2Model.from_pretrained("facebook/dinov2-base").to(device)
+    for param in dino_model.parameters():
+        param.requires_grad = False
     dino_model.eval()
 
     # DINOv2 normalization transform
@@ -122,38 +125,37 @@ def train():
     print("--- Starting Training for 4x4 Stage ---")
     
     fixed_noise = torch.randn(BATCH_SIZE, LATENT_DIM, device=device)
+    losses = []
 
     for epoch in range(EPOCHS):
+        epoch_loss = 0.0
         for i, batch in enumerate(tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")):
             # 1. Get real features from the dataset
-            real_features_4x4 = batch['4x4'].to(device)
+            real_features_16x16 = batch['16x16'].to(device)
+            
+            # Downsample the real features to the target size for this stage (4x4)
+            reshaped_real_features = real_features_16x16.reshape(BATCH_SIZE, 16, 16, -1)
+            real_features_4x4 = nn.functional.avg_pool2d(
+                reshaped_real_features.permute(0, 3, 1, 2),
+                kernel_size=4,
+                stride=4
+            ).permute(0, 2, 3, 1).reshape(BATCH_SIZE, 4*4, -1)
 
             # 2. Generate images from latent vectors
             z = torch.randn(BATCH_SIZE, LATENT_DIM, device=device)
             fake_images_4x4 = generator(z, current_stage=0)
 
             # 3. Get DINO features of the generated images
-            # Upsample and normalize. This part of the graph needs gradients.
             upsampled_fake_images = nn.functional.interpolate(fake_images_4x4, size=(224, 224), mode='bilinear', align_corners=False)
             normalized_fake_images = normalize(upsampled_fake_images)
             
-            # Get the features from DINO without tracking gradients for the DINO model itself.
-            with torch.no_grad():
-                outputs = dino_model(normalized_fake_images, output_hidden_states=True)
-                generated_features_16x16 = outputs.last_hidden_state[:, 1:, :]
-
-            # Now, we need to downsample the features. This operation must be part of the graph.
-            # We can't use the tensor from the no_grad block directly.
-            # Instead, we re-compute the features with gradients enabled for the generator,
-            # but we use the detached features for the loss calculation itself.
+            outputs = dino_model(normalized_fake_images, output_hidden_states=True)
+            generated_features_16x16 = outputs.last_hidden_state[:, 1:, :]
             
-            # Re-attach the graph by using the original tensor's graph information
-            generated_features_16x16_grad = generated_features_16x16.detach().requires_grad_(True)
-
-            # Reshape and downsample
-            reshaped_features = generated_features_16x16_grad.reshape(BATCH_SIZE, 16, 16, -1)
+            # Downsample the generated features to match the target size
+            reshaped_generated_features = generated_features_16x16.reshape(BATCH_SIZE, 16, 16, -1)
             generated_features_4x4 = nn.functional.avg_pool2d(
-                reshaped_features.permute(0, 3, 1, 2),
+                reshaped_generated_features.permute(0, 3, 1, 2),
                 kernel_size=4,
                 stride=4
             ).permute(0, 2, 3, 1).reshape(BATCH_SIZE, 4*4, -1)
@@ -164,19 +166,37 @@ def train():
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            
+            epoch_loss += loss.item()
 
+        avg_epoch_loss = epoch_loss / len(dataloader)
+        losses.append(avg_epoch_loss)
+        
         if (epoch + 1) % 10 == 0:
-            print(f"Epoch [{epoch+1}/{EPOCHS}], Loss: {loss.item():.4f}")
+            print(f"Epoch [{epoch+1}/{EPOCHS}], Loss: {avg_epoch_loss:.4f}")
 
         # 5. Save sample images
         if (epoch + 1) % SAVE_IMAGE_INTERVAL == 0:
             with torch.no_grad():
                 sample_images = generator(fixed_noise, current_stage=0)
-                # Denormalize for viewing: tanh output is [-1, 1], shift to [0, 1]
+                # Upscale for visibility
+                sample_images = nn.functional.interpolate(sample_images, size=(256, 256), mode='nearest')
+                # Denormalize for viewing: output is not activated, so we clamp to [-1, 1]
+                sample_images = torch.clamp(sample_images, -1, 1)
                 sample_images = (sample_images + 1) / 2
                 save_image(sample_images, OUTPUT_DIR / f"epoch_{epoch+1}_4x4.png", nrow=5)
 
     print("--- Finished Training for 4x4 Stage ---")
+    
+    # 6. Plot and save the loss curve
+    plt.figure(figsize=(10, 5))
+    plt.plot(losses)
+    plt.title("Generator Loss Curve (4x4 Stage)")
+    plt.xlabel("Epoch")
+    plt.ylabel("MSE Loss")
+    plt.savefig(OUTPUT_DIR / "loss_curve_4x4.png")
+    print(f"Loss curve saved to {OUTPUT_DIR / 'loss_curve_4x4.png'}")
+
     # Save the model checkpoint
     torch.save(generator.state_dict(), OUTPUT_DIR / "generator_stage_4x4.pth")
 

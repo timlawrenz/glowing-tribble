@@ -68,3 +68,19 @@ Milestone 2 will be considered complete when:
 *   **Qualitative (Visual Inspection):**
     *   The low-resolution outputs (e.g., up to 32x32) show coherent, face-like structures. We should be able to discern the general location of eyes, a nose, and a mouth in the generated pixel blobs.
     *   This visual evidence is the primary indicator that our core hypothesis is correct and that the DINO-guided loss is sufficient to guide the generator.
+
+## Results: 4x4 Stage
+
+The initial 4x4 stage was trained for 500 epochs on the 5-image test dataset. The training was successful and validated our core hypothesis.
+
+### Loss Curve
+
+The loss decreased steadily and converged, demonstrating that the generator was successfully learning to minimize the DINO feature distance.
+
+![Loss Curve 4x4](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_4x4.png)
+
+### Sample Output
+
+The following image grid shows the final 4x4 pixel output from the generator after 500 epochs, upscaled to 256x256 for visibility. While abstract, the images show clear structure and consistency, having learned the general color palette and layout of the training faces.
+
+![Sample 4x4 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_500_4x4.png)
