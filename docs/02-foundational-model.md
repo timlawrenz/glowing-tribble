@@ -128,3 +128,15 @@ The 32x32 stage was trained for 40 epochs. The generated images continue to impr
 ### Sample Output
 
 ![Sample 32x32 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_40_32x32.png)
+
+## Results: 64x64 Stage
+
+The 64x64 stage was trained for 50 epochs. The generated images now show significantly more detail and are beginning to look like plausible, albeit blurry, human faces.
+
+### Loss Curve
+
+![Loss Curve 64x64](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_64x64.png)
+
+### Sample Output
+
+![Sample 64x64 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/final_64x64.png)

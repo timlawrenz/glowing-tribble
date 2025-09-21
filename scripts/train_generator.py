@@ -206,6 +206,7 @@ def main():
         "epochs_16x16": 30,
         "epochs_32x32": 40,
         "epochs_64x64": 50,
+        "epochs_128x128": 60,
     }
 
     # --- Setup ---
@@ -280,6 +281,18 @@ def main():
         train_stage(4, generator, optimizer, dataloader, dino_model, device, config)
     else:
         print("Found 64x64 checkpoint. Loading weights.")
+        generator.load_state_dict(torch.load(checkpoint_path))
+
+    # Stage 5: 128x128
+    generator.add_stage(512, 512, config['w_dim'])
+    generator.to(device)
+    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
+    
+    checkpoint_path = config['output_dir'] / "128x128" / "generator.pth"
+    if not checkpoint_path.exists():
+        train_stage(5, generator, optimizer, dataloader, dino_model, device, config)
+    else:
+        print("Found 128x128 checkpoint. Loading weights.")
         generator.load_state_dict(torch.load(checkpoint_path))
 
 
