@@ -84,3 +84,19 @@ The loss decreased steadily and converged, demonstrating that the generator was 
 The following image grid shows the final 4x4 pixel output from the generator after 500 epochs, upscaled to 256x256 for visibility. While abstract, the images show clear structure and consistency, having learned the general color palette and layout of the training faces.
 
 ![Sample 4x4 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_500_4x4.png)
+
+## Results: 8x8 Stage
+
+Following the successful 4x4 training, the 8x8 stage was trained for 20 epochs. The model successfully learned to generate features at this higher resolution, demonstrating the viability of the progressive growing approach.
+
+### Loss Curve
+
+The loss for the 8x8 stage also shows a clear downward trend, validating the fade-in and training process for the new layer.
+
+![Loss Curve 8x8](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_8x8.png)
+
+### Sample Output
+
+The 8x8 images show a clear increase in detail and coherence compared to the 4x4 stage, with more defined shapes emerging.
+
+![Sample 8x8 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_20_8x8.png)

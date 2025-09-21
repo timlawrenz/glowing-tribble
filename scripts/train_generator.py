@@ -65,141 +65,180 @@ class ToRGB(nn.Module):
         return self.conv(x)
 
 class Generator(nn.Module):
-    """The complete progressive generator with improved architecture."""
-    def __init__(self, latent_dim=512, w_dim=512, hidden_dim=512):
+    """The complete progressive generator with a unified architecture."""
+    def __init__(self, latent_dim=512, w_dim=512, hidden_dim=512, initial_res=4):
         super().__init__()
         self.mapping_network = MappingNetwork(latent_dim, hidden_dim, w_dim)
-        self.initial_constant = nn.Parameter(torch.randn(1, 512, 4, 4))
+        self.initial_constant = nn.Parameter(torch.randn(1, 512, initial_res, initial_res))
         
-        # --- Initialize for 4x4 stage ---
-        self.block0 = GeneratorBlock(512, 512, w_dim)
-        self.to_rgb0 = ToRGB(512)
+        # Unified lists for all blocks and ToRGB layers
+        self.blocks = nn.ModuleList()
+        self.to_rgb_layers = nn.ModuleList()
         
-        self.blocks = nn.ModuleList([self.block0])
-        self.to_rgb_layers = nn.ModuleList([self.to_rgb0])
+        # Add the initial 4x4 stage
+        self.add_stage(512, 512, w_dim)
 
-    def forward(self, z, current_stage=0):
+    def add_stage(self, in_channels, out_channels, w_dim):
+        """Adds a new upscaling block and ToRGB layer."""
+        if not self.blocks: # This is the first block (4x4)
+            self.blocks.append(GeneratorBlock(in_channels, out_channels, w_dim))
+        else: # Subsequent blocks are upsampling blocks
+            # A proper progressive GAN would have different block structures
+            # but for this PoC, we'll keep it simple.
+            self.blocks.append(GeneratorBlock(in_channels, out_channels, w_dim))
+        
+        self.to_rgb_layers.append(ToRGB(out_channels))
+
+    def forward(self, z, stage, alpha=1.0):
         w = self.mapping_network(z)
         x = self.initial_constant.repeat(z.shape[0], 1, 1, 1)
+
+        # Pass through the initial block (which is now blocks[0])
+        x = self.blocks[0](x, w)
+
+        if stage == 0:
+            return self.to_rgb_layers[0](x)
+
+        # Upsample and pass through subsequent blocks
+        for i in range(1, stage + 1):
+            x_prev = x
+            x = nn.functional.interpolate(x, scale_factor=2, mode='nearest')
+            x = self.blocks[i](x, w)
+
+        # Fade-in logic
+        rgb_prev = self.to_rgb_layers[stage - 1](x_prev)
+        rgb_prev = nn.functional.interpolate(rgb_prev, scale_factor=2, mode='nearest')
+        rgb_new = self.to_rgb_layers[stage](x)
         
-        # For now, we only use the first block
-        x = self.blocks[current_stage](x, w)
-        return self.to_rgb_layers[current_stage](x)
+        return torch.lerp(rgb_prev, rgb_new, alpha)
 
 
 # --- 3. Training Loop ---
-def train():
-    """Main function to run the training process."""
+def train_stage(stage, generator, optimizer, dataloader, dino_model, device, config):
+    """A function to handle the training for a single progressive stage."""
+    
+    resolution = 4 * (2 ** stage)
+    stage_output_dir = config['output_dir'] / f"{resolution}x{resolution}"
+    stage_output_dir.mkdir(exist_ok=True)
+    
+    target_features_key = f"{resolution}x{resolution}"
+    epochs = config[f"epochs_{resolution}x{resolution}"]
+    
+    print(f"--- Starting Training for {resolution}x{resolution} Stage ---")
+    
+    losses = []
+    fixed_noise = torch.randn(config['batch_size'], config['latent_dim'], device=device)
+    normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    criterion = nn.MSELoss()
+
+    for epoch in range(epochs):
+        epoch_loss = 0.0
+        for i, batch in enumerate(tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}")):
+            alpha = min(1.0, (epoch * len(dataloader) + i) / (epochs * len(dataloader) * 0.5)) if stage > 0 else 1.0
+
+            real_features = batch[target_features_key].to(device)
+
+            z = torch.randn(config['batch_size'], config['latent_dim'], device=device)
+            fake_images = generator(z, stage, alpha)
+
+            upsampled_fake = nn.functional.interpolate(fake_images, size=(224, 224), mode='bilinear', align_corners=False)
+            normalized_fake = normalize(upsampled_fake)
+            
+            generated_features_full = dino_model(normalized_fake, output_hidden_states=True).last_hidden_state[:, 1:, :]
+            
+            # Downsample to target resolution
+            reshaped_generated = generated_features_full.reshape(config['batch_size'], 16, 16, -1)
+            downsample_factor = 16 // resolution
+            generated_features = nn.functional.avg_pool2d(
+                reshaped_generated.permute(0, 3, 1, 2), 
+                kernel_size=downsample_factor, 
+                stride=downsample_factor
+            ).permute(0, 2, 3, 1).reshape(config['batch_size'], resolution*resolution, -1)
+
+            loss = criterion(generated_features, real_features)
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+
+        avg_epoch_loss = epoch_loss / len(dataloader)
+        losses.append(avg_epoch_loss)
+        if (epoch + 1) % 5 == 0:
+            print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}")
+
+        if (epoch + 1) % (epochs // 4 or 1) == 0: # Ensure interval is at least 1
+            with torch.no_grad():
+                sample_images = generator(fixed_noise, stage, alpha=1.0)
+                sample_images = nn.functional.interpolate(sample_images, size=(256, 256), mode='nearest')
+                sample_images = torch.clamp(sample_images, -1, 1) / 2 + 0.5
+                save_image(sample_images, stage_output_dir / f"epoch_{epoch+1}.png", nrow=5)
+
+    print(f"--- Finished Training for {resolution}x{resolution} Stage ---")
+    
+    plt.figure(figsize=(10, 5))
+    plt.plot(losses)
+    plt.title(f"Generator Loss Curve ({resolution}x{resolution} Stage)")
+    plt.xlabel("Epoch")
+    plt.ylabel("MSE Loss")
+    plt.savefig(stage_output_dir / "loss_curve.png")
+    print(f"Loss curve saved to {stage_output_dir / 'loss_curve.png'}")
+    
+    torch.save(generator.state_dict(), stage_output_dir / "generator.pth")
+
+
+def main():
+    """Main function to orchestrate the progressive training."""
     # --- Configuration ---
-    PYRAMID_DIR = Path("data/feature_pyramids")
-    OUTPUT_DIR = Path("training_progress")
-    LATENT_DIM = 512
-    W_DIM = 512
-    LEARNING_RATE = 1e-4
-    BATCH_SIZE = 5 # Use all 5 images
-    EPOCHS = 500 # More epochs for a small dataset
-    SAVE_IMAGE_INTERVAL = 50
+    config = {
+        "pyramid_dir": Path("data/feature_pyramids"),
+        "output_dir": Path("training_progress"),
+        "latent_dim": 512,
+        "w_dim": 512,
+        "learning_rate": 1e-4,
+        "batch_size": 5,
+        "epochs_4x4": 10, # Reduced for faster testing
+        "epochs_8x8": 20,
+    }
 
     # --- Setup ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    config['output_dir'].mkdir(exist_ok=True)
 
-    dataset = FeaturePyramidDataset(PYRAMID_DIR)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+    dataset = FeaturePyramidDataset(config['pyramid_dir'])
+    dataloader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=True)
     
-    generator = Generator(latent_dim=LATENT_DIM, w_dim=W_DIM).to(device)
-    optimizer = optim.Adam(generator.parameters(), lr=LEARNING_RATE)
-    criterion = nn.MSELoss()
-
-    # Load the frozen DINOv2 model and freeze its weights
+    generator = Generator(latent_dim=config['latent_dim'], w_dim=config['w_dim']).to(device)
+    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
+    
     dino_model = Dinov2Model.from_pretrained("facebook/dinov2-base").to(device)
     for param in dino_model.parameters():
         param.requires_grad = False
     dino_model.eval()
 
-    # DINOv2 normalization transform
-    normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
-    # --- Training the 4x4 Stage ---
-    print("--- Starting Training for 4x4 Stage ---")
+    # --- Run Training Stages ---
     
-    fixed_noise = torch.randn(BATCH_SIZE, LATENT_DIM, device=device)
-    losses = []
+    # Check if a 4x4 checkpoint exists and train if not
+    checkpoint_4x4_path = config['output_dir'] / "4x4" / "generator.pth"
+    if not checkpoint_4x4_path.exists():
+        train_stage(0, generator, optimizer, dataloader, dino_model, device, config)
+    else:
+        print("Found 4x4 checkpoint. Loading weights.")
+        generator.load_state_dict(torch.load(checkpoint_4x4_path))
 
-    for epoch in range(EPOCHS):
-        epoch_loss = 0.0
-        for i, batch in enumerate(tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")):
-            # 1. Get real features from the dataset
-            real_features_16x16 = batch['16x16'].to(device)
-            
-            # Downsample the real features to the target size for this stage (4x4)
-            reshaped_real_features = real_features_16x16.reshape(BATCH_SIZE, 16, 16, -1)
-            real_features_4x4 = nn.functional.avg_pool2d(
-                reshaped_real_features.permute(0, 3, 1, 2),
-                kernel_size=4,
-                stride=4
-            ).permute(0, 2, 3, 1).reshape(BATCH_SIZE, 4*4, -1)
-
-            # 2. Generate images from latent vectors
-            z = torch.randn(BATCH_SIZE, LATENT_DIM, device=device)
-            fake_images_4x4 = generator(z, current_stage=0)
-
-            # 3. Get DINO features of the generated images
-            upsampled_fake_images = nn.functional.interpolate(fake_images_4x4, size=(224, 224), mode='bilinear', align_corners=False)
-            normalized_fake_images = normalize(upsampled_fake_images)
-            
-            outputs = dino_model(normalized_fake_images, output_hidden_states=True)
-            generated_features_16x16 = outputs.last_hidden_state[:, 1:, :]
-            
-            # Downsample the generated features to match the target size
-            reshaped_generated_features = generated_features_16x16.reshape(BATCH_SIZE, 16, 16, -1)
-            generated_features_4x4 = nn.functional.avg_pool2d(
-                reshaped_generated_features.permute(0, 3, 1, 2),
-                kernel_size=4,
-                stride=4
-            ).permute(0, 2, 3, 1).reshape(BATCH_SIZE, 4*4, -1)
-
-            # 4. Calculate loss and backpropagate
-            loss = criterion(generated_features_4x4, real_features_4x4)
-            
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            
-            epoch_loss += loss.item()
-
-        avg_epoch_loss = epoch_loss / len(dataloader)
-        losses.append(avg_epoch_loss)
-        
-        if (epoch + 1) % 10 == 0:
-            print(f"Epoch [{epoch+1}/{EPOCHS}], Loss: {avg_epoch_loss:.4f}")
-
-        # 5. Save sample images
-        if (epoch + 1) % SAVE_IMAGE_INTERVAL == 0:
-            with torch.no_grad():
-                sample_images = generator(fixed_noise, current_stage=0)
-                # Upscale for visibility
-                sample_images = nn.functional.interpolate(sample_images, size=(256, 256), mode='nearest')
-                # Denormalize for viewing: output is not activated, so we clamp to [-1, 1]
-                sample_images = torch.clamp(sample_images, -1, 1)
-                sample_images = (sample_images + 1) / 2
-                save_image(sample_images, OUTPUT_DIR / f"epoch_{epoch+1}_4x4.png", nrow=5)
-
-    print("--- Finished Training for 4x4 Stage ---")
+    # Add and train the 8x8 stage
+    generator.add_stage(512, 512, config['w_dim'])
+    generator.to(device)
+    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
     
-    # 6. Plot and save the loss curve
-    plt.figure(figsize=(10, 5))
-    plt.plot(losses)
-    plt.title("Generator Loss Curve (4x4 Stage)")
-    plt.xlabel("Epoch")
-    plt.ylabel("MSE Loss")
-    plt.savefig(OUTPUT_DIR / "loss_curve_4x4.png")
-    print(f"Loss curve saved to {OUTPUT_DIR / 'loss_curve_4x4.png'}")
-
-    # Save the model checkpoint
-    torch.save(generator.state_dict(), OUTPUT_DIR / "generator_stage_4x4.pth")
+    checkpoint_8x8_path = config['output_dir'] / "8x8" / "generator.pth"
+    if not checkpoint_8x8_path.exists():
+        train_stage(1, generator, optimizer, dataloader, dino_model, device, config)
+    else:
+        print("Found 8x8 checkpoint. Loading weights.")
+        generator.load_state_dict(torch.load(checkpoint_8x8_path))
 
 
 if __name__ == "__main__":
-    train()
+    main()
