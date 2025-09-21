@@ -6,6 +6,23 @@ This repository contains a Proof of Concept (PoC) for an image generation model 
 
 The primary objective is to build and train a model that can generate 256x256 pixel images of human faces. The core hypothesis is that a progressive generator can be trained to produce coherent images using multi-scale DINOv2 patch embeddings as its primary loss function, bypassing the need for a traditional GAN discriminator.
 
+## Getting Started
+
+### System Requirements
+- Python 3.11
+- A virtual environment manager like `venv`.
+
+### Setup
+1. **Create and activate a virtual environment:**
+   ```bash
+   python3.11 -m venv .venv
+   source .venv/bin/activate
+   ```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 ## High-Level Roadmap
 
 The project is broken down into four key milestones:
