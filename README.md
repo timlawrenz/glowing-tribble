@@ -50,7 +50,7 @@ The visualizations show a clear semantic correspondence between the original ima
 *(Original Image | 4x4 Features | 8x8 Features | 16x16 Features)*
 ![Example Visualization](examples/visualizations/test_image_01.png)
 
-### Milestone 2: Foundational Model Training (4x4, 8x8, 16x16 & 32x32 Stages Complete)
+### Milestone 2: Foundational Model Training (4x4, 8x8, 16x16, 32x32 & 64x64 Stages Complete)
 
 We have successfully trained the first stage of our progressive generator. By training on a small dataset of 5 images, we validated that the DINO-guided loss function works as intended. The model's loss decreased steadily, proving that the entire training pipeline—from data loading to backpropagation—is mechanically sound.
 

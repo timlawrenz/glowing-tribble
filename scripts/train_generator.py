@@ -170,7 +170,16 @@ def train_stage(stage, generator, optimizer, dataloader, dino_model, device, con
                 save_image(sample_images, stage_output_dir / f"epoch_{epoch+1}.png", nrow=5)
 
     print(f"--- Finished Training for {resolution}x{resolution} Stage ---")
+
+    # Save a final sample image grid
+    with torch.no_grad():
+        sample_images = generator(fixed_noise, stage, alpha=1.0)
+        sample_images = nn.functional.interpolate(sample_images, size=(256, 256), mode='nearest')
+        sample_images = torch.clamp(sample_images, -1, 1) / 2 + 0.5
+        save_image(sample_images, stage_output_dir / "final.png", nrow=5)
+        print(f"Final sample image saved to {stage_output_dir / 'final.png'}")
     
+    # Plot and save the loss curve
     plt.figure(figsize=(10, 5))
     plt.plot(losses)
     plt.title(f"Generator Loss Curve ({resolution}x{resolution} Stage)")
