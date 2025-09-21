@@ -19,9 +19,8 @@ echo "--- Step 1C: Visualizing Feature Pyramids ---"
 python scripts/visualize_pyramids.py
 
 # Future milestones will be called here. For example:
-# echo ""
-# echo "--- Milestone 2: Foundational Model Training ---"
-# python scripts/train_model.py
+# # --- Milestone 2: Foundational Model Training ---"
+# python scripts/train_generator.py
 
 echo ""
 echo "PoC execution finished."
