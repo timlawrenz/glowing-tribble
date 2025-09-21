@@ -100,3 +100,19 @@ The loss for the 8x8 stage also shows a clear downward trend, validating the fad
 The 8x8 images show a clear increase in detail and coherence compared to the 4x4 stage, with more defined shapes emerging.
 
 ![Sample 8x8 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_20_8x8.png)
+
+## Results: 16x16 Stage
+
+The 16x16 stage was trained for 30 epochs. At this resolution, recognizable facial features begin to emerge, further validating the effectiveness of the DINO-guided progressive training approach.
+
+### Loss Curve
+
+The loss curve for the 16x16 stage continues to show a healthy downward trend.
+
+![Loss Curve 16x16](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_16x16.png)
+
+### Sample Output
+
+The generated images now clearly show emerging facial structures, such as eyes, noses, and mouths, confirming that the model is learning meaningful representations.
+
+![Sample 16x16 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_28_16x16.png)

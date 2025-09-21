@@ -136,26 +136,21 @@ def train_stage(stage, generator, optimizer, dataloader, dino_model, device, con
         for i, batch in enumerate(tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}")):
             alpha = min(1.0, (epoch * len(dataloader) + i) / (epochs * len(dataloader) * 0.5)) if stage > 0 else 1.0
 
-            real_features = batch[target_features_key].to(device)
+            # The ground truth is always the 16x16 features from the original image
+            real_features_16x16 = batch['16x16'].to(device)
 
             z = torch.randn(config['batch_size'], config['latent_dim'], device=device)
             fake_images = generator(z, stage, alpha)
 
+            # Upsample the generated images (4x4, 8x8, etc.) to what DINO expects
             upsampled_fake = nn.functional.interpolate(fake_images, size=(224, 224), mode='bilinear', align_corners=False)
             normalized_fake = normalize(upsampled_fake)
             
-            generated_features_full = dino_model(normalized_fake, output_hidden_states=True).last_hidden_state[:, 1:, :]
-            
-            # Downsample to target resolution
-            reshaped_generated = generated_features_full.reshape(config['batch_size'], 16, 16, -1)
-            downsample_factor = 16 // resolution
-            generated_features = nn.functional.avg_pool2d(
-                reshaped_generated.permute(0, 3, 1, 2), 
-                kernel_size=downsample_factor, 
-                stride=downsample_factor
-            ).permute(0, 2, 3, 1).reshape(config['batch_size'], resolution*resolution, -1)
+            # Get the 16x16 features from the upsampled generated image
+            generated_features_16x16 = dino_model(normalized_fake, output_hidden_states=True).last_hidden_state[:, 1:, :]
 
-            loss = criterion(generated_features, real_features)
+            # The loss is the difference between the generated features and the real features at 16x16
+            loss = criterion(generated_features_16x16, real_features_16x16)
             
             optimizer.zero_grad()
             loss.backward()
@@ -197,8 +192,10 @@ def main():
         "w_dim": 512,
         "learning_rate": 1e-4,
         "batch_size": 5,
-        "epochs_4x4": 10, # Reduced for faster testing
+        "epochs_4x4": 10, 
         "epochs_8x8": 20,
+        "epochs_16x16": 30,
+        "epochs_32x32": 40,
     }
 
     # --- Setup ---
@@ -219,25 +216,49 @@ def main():
 
     # --- Run Training Stages ---
     
-    # Check if a 4x4 checkpoint exists and train if not
-    checkpoint_4x4_path = config['output_dir'] / "4x4" / "generator.pth"
-    if not checkpoint_4x4_path.exists():
+    # Stage 0: 4x4
+    checkpoint_path = config['output_dir'] / "4x4" / "generator.pth"
+    if not checkpoint_path.exists():
         train_stage(0, generator, optimizer, dataloader, dino_model, device, config)
     else:
         print("Found 4x4 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_4x4_path))
+        generator.load_state_dict(torch.load(checkpoint_path))
 
-    # Add and train the 8x8 stage
+    # Stage 1: 8x8
     generator.add_stage(512, 512, config['w_dim'])
     generator.to(device)
     optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
     
-    checkpoint_8x8_path = config['output_dir'] / "8x8" / "generator.pth"
-    if not checkpoint_8x8_path.exists():
+    checkpoint_path = config['output_dir'] / "8x8" / "generator.pth"
+    if not checkpoint_path.exists():
         train_stage(1, generator, optimizer, dataloader, dino_model, device, config)
     else:
         print("Found 8x8 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_8x8_path))
+        generator.load_state_dict(torch.load(checkpoint_path))
+
+    # Stage 2: 16x16
+    generator.add_stage(512, 512, config['w_dim'])
+    generator.to(device)
+    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
+    
+    checkpoint_path = config['output_dir'] / "16x16" / "generator.pth"
+    if not checkpoint_path.exists():
+        train_stage(2, generator, optimizer, dataloader, dino_model, device, config)
+    else:
+        print("Found 16x16 checkpoint. Loading weights.")
+        generator.load_state_dict(torch.load(checkpoint_path))
+
+    # Stage 3: 32x32
+    generator.add_stage(512, 512, config['w_dim'])
+    generator.to(device)
+    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
+    
+    checkpoint_path = config['output_dir'] / "32x32" / "generator.pth"
+    if not checkpoint_path.exists():
+        train_stage(3, generator, optimizer, dataloader, dino_model, device, config)
+    else:
+        print("Found 32x32 checkpoint. Loading weights.")
+        generator.load_state_dict(torch.load(checkpoint_path))
 
 
 if __name__ == "__main__":
