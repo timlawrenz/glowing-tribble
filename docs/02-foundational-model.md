@@ -116,3 +116,15 @@ The loss curve for the 16x16 stage continues to show a healthy downward trend.
 The generated images now clearly show emerging facial structures, such as eyes, noses, and mouths, confirming that the model is learning meaningful representations.
 
 ![Sample 16x16 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_28_16x16.png)
+
+## Results: 32x32 Stage
+
+The 32x32 stage was trained for 40 epochs. The generated images continue to improve in quality and coherence.
+
+### Loss Curve
+
+![Loss Curve 32x32](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_32x32.png)
+
+### Sample Output
+
+![Sample 32x32 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_40_32x32.png)
