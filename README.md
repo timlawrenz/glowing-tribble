@@ -15,9 +15,21 @@ The project is broken down into four key milestones:
 3.  **Full-Resolution Generation:** Scale the generator to the full 256x256 resolution and verify its ability to produce visually coherent human faces.
 4.  **Initial Text-Conditioning:** Implement basic text-based control using CLIP to demonstrate the model's controllability.
 
+## Project Structure
+
+The repository is organized to ensure clarity and reproducibility:
+
+-   `main.py`: The main entry point to run the entire PoC workflow.
+-   `scripts/`: Contains the individual Python scripts that execute each milestone of the PoC.
+-   `tests/`: Contains the corresponding tests for each script to ensure correctness.
+-   `data/`: The target directory for raw images and the pre-computed feature pyramids (ignored by git).
+-   `docs/`: Contains all project documentation, including brainstorming, roadmapping, and detailed milestone plans.
+-   `requirements.txt`: Lists all Python dependencies for the project.
+
 ## Documentation
 
 For a deeper dive into the project's conception and technical plan, please see the following documents:
 
 *   **[docs/brainstorming.md](docs/brainstorming.md):** The initial exploration of the coarse-to-fine generation strategy, the role of DINOv2, and the potential for text-based conditioning.
 *   **[docs/roadmap.md](docs/roadmap.md):** A detailed, milestone-based plan for executing this Proof of Concept.
+*   **[docs/01-feature-pyramid.md](docs/01-feature-pyramid.md):** A detailed technical plan for the first milestone, focusing on pre-computing the DINOv2 feature pyramids.
