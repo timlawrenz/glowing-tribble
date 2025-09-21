@@ -1,4 +1,6 @@
 .env
+training_progress/
+.pth
 
 # Python virtual environment
 .venv/

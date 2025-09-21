@@ -207,6 +207,7 @@ def main():
         "epochs_32x32": 40,
         "epochs_64x64": 50,
         "epochs_128x128": 60,
+        "epochs_256x256": 70,
     }
 
     # --- Setup ---
@@ -226,74 +227,31 @@ def main():
     dino_model.eval()
 
     # --- Run Training Stages ---
-    
-    # Stage 0: 4x4
-    checkpoint_path = config['output_dir'] / "4x4" / "generator.pth"
-    if not checkpoint_path.exists():
-        train_stage(0, generator, optimizer, dataloader, dino_model, device, config)
-    else:
-        print("Found 4x4 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_path))
+    max_stage = 6 # Corresponds to 256x256
+    for stage in range(max_stage + 1):
+        resolution = 4 * (2 ** stage)
+        
+        # Add a new stage to the generator (if it's not the first one)
+        if stage > 0:
+            generator.add_stage(512, 512, config['w_dim'])
+            generator.to(device)
+            optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
 
-    # Stage 1: 8x8
-    generator.add_stage(512, 512, config['w_dim'])
-    generator.to(device)
-    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
-    
-    checkpoint_path = config['output_dir'] / "8x8" / "generator.pth"
-    if not checkpoint_path.exists():
-        train_stage(1, generator, optimizer, dataloader, dino_model, device, config)
-    else:
-        print("Found 8x8 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_path))
-
-    # Stage 2: 16x16
-    generator.add_stage(512, 512, config['w_dim'])
-    generator.to(device)
-    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
-    
-    checkpoint_path = config['output_dir'] / "16x16" / "generator.pth"
-    if not checkpoint_path.exists():
-        train_stage(2, generator, optimizer, dataloader, dino_model, device, config)
-    else:
-        print("Found 16x16 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_path))
-
-    # Stage 3: 32x32
-    generator.add_stage(512, 512, config['w_dim'])
-    generator.to(device)
-    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
-    
-    checkpoint_path = config['output_dir'] / "32x32" / "generator.pth"
-    if not checkpoint_path.exists():
-        train_stage(3, generator, optimizer, dataloader, dino_model, device, config)
-    else:
-        print("Found 32x32 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_path))
-
-    # Stage 4: 64x64
-    generator.add_stage(512, 512, config['w_dim'])
-    generator.to(device)
-    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
-    
-    checkpoint_path = config['output_dir'] / "64x64" / "generator.pth"
-    if not checkpoint_path.exists():
-        train_stage(4, generator, optimizer, dataloader, dino_model, device, config)
-    else:
-        print("Found 64x64 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_path))
-
-    # Stage 5: 128x128
-    generator.add_stage(512, 512, config['w_dim'])
-    generator.to(device)
-    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
-    
-    checkpoint_path = config['output_dir'] / "128x128" / "generator.pth"
-    if not checkpoint_path.exists():
-        train_stage(5, generator, optimizer, dataloader, dino_model, device, config)
-    else:
-        print("Found 128x128 checkpoint. Loading weights.")
-        generator.load_state_dict(torch.load(checkpoint_path))
+        # Check for a checkpoint for the current stage
+        checkpoint_path = config['output_dir'] / f"{resolution}x{resolution}" / "generator.pth"
+        if not checkpoint_path.exists():
+            # If no checkpoint, we need to load the previous one to continue training
+            if stage > 0:
+                prev_resolution = 4 * (2 ** (stage - 1))
+                prev_checkpoint_path = config['output_dir'] / f"{prev_resolution}x{prev_resolution}" / "generator.pth"
+                if prev_checkpoint_path.exists():
+                    print(f"Loading weights from {prev_resolution}x{prev_resolution} checkpoint.")
+                    generator.load_state_dict(torch.load(prev_checkpoint_path), strict=False)
+            
+            train_stage(stage, generator, optimizer, dataloader, dino_model, device, config)
+        else:
+            print(f"Found {resolution}x{resolution} checkpoint. Loading weights.")
+            generator.load_state_dict(torch.load(checkpoint_path))
 
 
 if __name__ == "__main__":

@@ -23,8 +23,29 @@ The primary objective is to build and train a model that can generate 256x256 pi
    pip install -r requirements.txt
    ```
 
-### Running the PoC
-After setting up the environment, you can run the entire workflow by executing the main shell script:
+### Preparing Your Data
+The data preparation process is now split into two steps: downloading (optional) and cropping.
+
+#### Step 1: Downloading Images (Optional)
+If you need to download a sample dataset, you can use the `download_images.py` script.
+   ```bash
+   source .venv/bin/activate
+   python scripts/download_images.py
+   ```
+This will download the 5 sample images into the `data/downloads/` directory.
+
+#### Step 2: Cropping Faces
+This step processes all images in a source directory, detects faces, and saves the cropped 256x256 results to `data/raw_images/`.
+
+To process the downloaded sample images, run:
+   ```bash
+   source .venv/bin/activate
+   python scripts/prepare_test_images.py
+   ```
+To process your own local images, first place them in a directory (e.g., `my_photos/`) and then modify the `INPUT_DIR` variable in `scripts/prepare_test_images.py` to point to your directory.
+
+### Running the Training Pipeline
+Once your cropped face images are in `data/raw_images/`, you can run the entire training workflow:
    ```bash
    bash main.sh
    ```
@@ -50,7 +71,7 @@ The visualizations show a clear semantic correspondence between the original ima
 *(Original Image | 4x4 Features | 8x8 Features | 16x16 Features)*
 ![Example Visualization](examples/visualizations/test_image_01.png)
 
-### Milestone 2: Foundational Model Training (4x4, 8x8, 16x16, 32x32 & 64x64 Stages Complete)
+### Milestone 2: Foundational Model Training (Complete)
 
 We have successfully trained the first stage of our progressive generator. By training on a small dataset of 5 images, we validated that the DINO-guided loss function works as intended. The model's loss decreased steadily, proving that the entire training pipeline—from data loading to backpropagation—is mechanically sound.
 

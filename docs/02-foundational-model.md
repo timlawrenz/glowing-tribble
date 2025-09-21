@@ -140,3 +140,27 @@ The 64x64 stage was trained for 50 epochs. The generated images now show signifi
 ### Sample Output
 
 ![Sample 64x64 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/final_64x64.png)
+
+## Results: 128x128 Stage
+
+The 128x128 stage was trained for 60 epochs. The generated images are now clearly recognizable as faces, with distinct features and a high degree of coherence.
+
+### Loss Curve
+
+![Loss Curve 128x128](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_128x128.png)
+
+### Sample Output
+
+![Sample 128x128 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/final_128x128.png)
+
+## Results: 256x256 Stage
+
+The final 256x256 stage was trained for 70 epochs. The resulting images are the culmination of the progressive growing process, showing the most detail and coherence.
+
+### Loss Curve
+
+![Loss Curve 256x256](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_256x256.png)
+
+### Sample Output
+
+![Sample 256x256 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/final_256x256.png)
