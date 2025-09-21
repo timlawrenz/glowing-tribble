@@ -23,6 +23,12 @@ The primary objective is to build and train a model that can generate 256x256 pi
    pip install -r requirements.txt
    ```
 
+### Running the PoC
+After setting up the environment, you can run the entire workflow by executing the main shell script:
+   ```bash
+   bash main.sh
+   ```
+
 ## High-Level Roadmap
 
 The project is broken down into four key milestones:
@@ -36,7 +42,7 @@ The project is broken down into four key milestones:
 
 The repository is organized to ensure clarity and reproducibility:
 
--   `main.py`: The main entry point to run the entire PoC workflow.
+-   `main.sh`: The main entry point to run the entire PoC workflow.
 -   `scripts/`: Contains the individual Python scripts that execute each milestone of the PoC.
 -   `tests/`: Contains the corresponding tests for each script to ensure correctness.
 -   `data/`: The target directory for raw images and the pre-computed feature pyramids (ignored by git).
