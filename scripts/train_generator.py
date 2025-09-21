@@ -110,18 +110,19 @@ class Generator(nn.Module):
         rgb_prev = nn.functional.interpolate(rgb_prev, scale_factor=2, mode='nearest')
         rgb_new = self.to_rgb_layers[stage](x)
         
-        return torch.lerp(rgb_prev, rgb_new, alpha)
+        # Ensure both are float32 for the lerp operation
+        return torch.lerp(rgb_prev.float(), rgb_new.float(), alpha)
 
 
 # --- 3. Training Loop ---
-def train_stage(stage, generator, optimizer, dataloader, dino_model, device, config):
+def train_stage(stage, generator, optimizer_g, optimizer_m, dataloader, dino_model, device, config, scaler):
     """A function to handle the training for a single progressive stage."""
+    
     
     resolution = 4 * (2 ** stage)
     stage_output_dir = config['output_dir'] / f"{resolution}x{resolution}"
     stage_output_dir.mkdir(exist_ok=True)
     
-    target_features_key = f"{resolution}x{resolution}"
     epochs = config[f"epochs_{resolution}x{resolution}"]
     
     print(f"--- Starting Training for {resolution}x{resolution} Stage ---")
@@ -138,23 +139,51 @@ def train_stage(stage, generator, optimizer, dataloader, dino_model, device, con
 
             # The ground truth is always the 16x16 features from the original image
             real_features_16x16 = batch['16x16'].to(device)
+            
+            # Downsample the real features to the target size for this stage
+            downsample_factor_real = 16 // resolution
+            if downsample_factor_real > 1:
+                reshaped_real_features = real_features_16x16.reshape(config['batch_size'], 16, 16, -1)
+                real_features = nn.functional.avg_pool2d(
+                    reshaped_real_features.permute(0, 3, 1, 2),
+                    kernel_size=downsample_factor_real,
+                    stride=downsample_factor_real
+                ).permute(0, 2, 3, 1).reshape(config['batch_size'], resolution*resolution, -1)
+            else:
+                real_features = real_features_16x16
+
 
             z = torch.randn(config['batch_size'], config['latent_dim'], device=device)
             fake_images = generator(z, stage, alpha)
 
-            # Upsample the generated images (4x4, 8x8, etc.) to what DINO expects
+            # Upsample the generated images to what DINO expects
             upsampled_fake = nn.functional.interpolate(fake_images, size=(224, 224), mode='bilinear', align_corners=False)
             normalized_fake = normalize(upsampled_fake)
             
             # Get the 16x16 features from the upsampled generated image
             generated_features_16x16 = dino_model(normalized_fake, output_hidden_states=True).last_hidden_state[:, 1:, :]
 
-            # The loss is the difference between the generated features and the real features at 16x16
-            loss = criterion(generated_features_16x16, real_features_16x16)
+            # Downsample to target resolution
+            if resolution < 16:
+                reshaped_generated = generated_features_16x16.reshape(config['batch_size'], 16, 16, -1)
+                downsample_factor_gen = 16 // resolution
+                generated_features = nn.functional.avg_pool2d(
+                    reshaped_generated.permute(0, 3, 1, 2), 
+                    kernel_size=downsample_factor_gen, 
+                    stride=downsample_factor_gen
+                ).permute(0, 2, 3, 1).reshape(config['batch_size'], resolution*resolution, -1)
+            else:
+                generated_features = generated_features_16x16
+
+            loss = criterion(generated_features, real_features)
             
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            optimizer_g.zero_grad()
+            optimizer_m.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.step(optimizer_g)
+            scaler.step(optimizer_m)
+            scaler.update()
+            
             epoch_loss += loss.item()
 
         avg_epoch_loss = epoch_loss / len(dataloader)
@@ -201,13 +230,13 @@ def main():
         "w_dim": 512,
         "learning_rate": 1e-4,
         "batch_size": 5,
-        "epochs_4x4": 10, 
-        "epochs_8x8": 20,
-        "epochs_16x16": 30,
-        "epochs_32x32": 40,
-        "epochs_64x64": 50,
-        "epochs_128x128": 60,
-        "epochs_256x256": 70,
+        "epochs_4x4": 100, 
+        "epochs_8x8": 150,
+        "epochs_16x16": 200,
+        "epochs_32x32": 250,
+        "epochs_64x64": 300,
+        "epochs_128x128": 350,
+        "epochs_256x256": 400,
     }
 
     # --- Setup ---
@@ -219,12 +248,17 @@ def main():
     dataloader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=True)
     
     generator = Generator(latent_dim=config['latent_dim'], w_dim=config['w_dim']).to(device)
-    optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
+    
+    # Use separate optimizers for mapping network and generator blocks
+    optimizer_g = optim.AdamW(generator.blocks.parameters(), lr=config['learning_rate'], weight_decay=1e-4)
+    optimizer_m = optim.AdamW(generator.mapping_network.parameters(), lr=config['learning_rate'] * 0.01, weight_decay=1e-4) # Lower LR for mapping network
     
     dino_model = Dinov2Model.from_pretrained("facebook/dinov2-base").to(device)
     for param in dino_model.parameters():
         param.requires_grad = False
     dino_model.eval()
+    
+    scaler = torch.cuda.amp.GradScaler()
 
     # --- Run Training Stages ---
     max_stage = 6 # Corresponds to 256x256
@@ -235,7 +269,10 @@ def main():
         if stage > 0:
             generator.add_stage(512, 512, config['w_dim'])
             generator.to(device)
-            optimizer = optim.Adam(generator.parameters(), lr=config['learning_rate'])
+            # Create new optimizers for the updated generator
+            optimizer_g = optim.AdamW(generator.blocks.parameters(), lr=config['learning_rate'] / (2**stage), weight_decay=1e-4)
+            optimizer_m = optim.AdamW(generator.mapping_network.parameters(), lr=config['learning_rate'] * 0.01 / (2**stage), weight_decay=1e-4)
+
 
         # Check for a checkpoint for the current stage
         checkpoint_path = config['output_dir'] / f"{resolution}x{resolution}" / "generator.pth"
@@ -248,7 +285,7 @@ def main():
                     print(f"Loading weights from {prev_resolution}x{prev_resolution} checkpoint.")
                     generator.load_state_dict(torch.load(prev_checkpoint_path), strict=False)
             
-            train_stage(stage, generator, optimizer, dataloader, dino_model, device, config)
+            train_stage(stage, generator, optimizer_g, optimizer_m, dataloader, dino_model, device, config, scaler)
         else:
             print(f"Found {resolution}x{resolution} checkpoint. Loading weights.")
             generator.load_state_dict(torch.load(checkpoint_path))

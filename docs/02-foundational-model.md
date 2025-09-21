@@ -69,98 +69,46 @@ Milestone 2 will be considered complete when:
     *   The low-resolution outputs (e.g., up to 32x32) show coherent, face-like structures. We should be able to discern the general location of eyes, a nose, and a mouth in the generated pixel blobs.
     *   This visual evidence is the primary indicator that our core hypothesis is correct and that the DINO-guided loss is sufficient to guide the generator.
 
-## Results: 4x4 Stage
+The second milestone was to develop and train the progressive generator. The model starts by generating a 4x4 image and is progressively grown by adding new blocks to double the resolution at each stage, all the way up to 256x256.
 
-The initial 4x4 stage was trained for 500 epochs on the 5-image test dataset. The training was successful and validated our core hypothesis.
+The generator is guided by a Mean Squared Error (MSE) loss between the DINOv2 patch embeddings of its generated images and the pre-computed ground truth embeddings from Milestone 1.
 
-### Loss Curve
+## Final Results
 
-The loss decreased steadily and converged, demonstrating that the generator was successfully learning to minimize the DINO feature distance.
+The model was trained successfully through all stages. The final images and loss curves for each stage are presented below.
 
-![Loss Curve 4x4](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_4x4.png)
+### 4x4 Stage
+| Final Image | Loss Curve |
+| :---: | :---: |
+| ![Final 4x4 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_4x4.png-428025565) | ![4x4 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_4x4.png-428025566) |
 
-### Sample Output
+### 8x8 Stage
+| Final Image | Loss Curve |
+| :---: | :---: |
+| ![Final 8x8 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_8x8.png-428025567) | ![8x8 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_8x8.png-428025568) |
 
-The following image grid shows the final 4x4 pixel output from the generator after 500 epochs, upscaled to 256x256 for visibility. While abstract, the images show clear structure and consistency, having learned the general color palette and layout of the training faces.
+### 16x16 Stage
+| Final Image | Loss Curve |
+| :---: | :---: |
+| ![Final 16x16 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_16x16.png-428025569) | ![16x16 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_16x16.png-428025570) |
 
-![Sample 4x4 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_500_4x4.png)
+### 32x32 Stage
+| Final Image | Loss Curve |
+| :---: | :---: |
+| ![Final 32x32 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_32x32.png-428025571) | ![32x32 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_32x32.png-428025572) |
 
-## Results: 8x8 Stage
+### 64x64 Stage
+| Final Image | Loss Curve |
+| :---: | :---: |
+| ![Final 64x64 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_64x64.png-428025573) | ![64x64 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_64x64.png-428025574) |
 
-Following the successful 4x4 training, the 8x8 stage was trained for 20 epochs. The model successfully learned to generate features at this higher resolution, demonstrating the viability of the progressive growing approach.
+### 128x128 Stage
+| Final Image | Loss Curve |
+| :---: | :---: |
+| ![Final 128x128 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_128x128.png-428025575) | ![128x128 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_128x128.png-428025576) |
 
-### Loss Curve
+### 256x256 Stage
+| Final Image | Loss Curve |
+| :---: | :---: |
+| ![Final 256x256 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_256x256.png-428025577) | ![256x256 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_256x256.png-428025578) |
 
-The loss for the 8x8 stage also shows a clear downward trend, validating the fade-in and training process for the new layer.
-
-![Loss Curve 8x8](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_8x8.png)
-
-### Sample Output
-
-The 8x8 images show a clear increase in detail and coherence compared to the 4x4 stage, with more defined shapes emerging.
-
-![Sample 8x8 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_20_8x8.png)
-
-## Results: 16x16 Stage
-
-The 16x16 stage was trained for 30 epochs. At this resolution, recognizable facial features begin to emerge, further validating the effectiveness of the DINO-guided progressive training approach.
-
-### Loss Curve
-
-The loss curve for the 16x16 stage continues to show a healthy downward trend.
-
-![Loss Curve 16x16](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_16x16.png)
-
-### Sample Output
-
-The generated images now clearly show emerging facial structures, such as eyes, noses, and mouths, confirming that the model is learning meaningful representations.
-
-![Sample 16x16 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_28_16x16.png)
-
-## Results: 32x32 Stage
-
-The 32x32 stage was trained for 40 epochs. The generated images continue to improve in quality and coherence.
-
-### Loss Curve
-
-![Loss Curve 32x32](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_32x32.png)
-
-### Sample Output
-
-![Sample 32x32 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/epoch_40_32x32.png)
-
-## Results: 64x64 Stage
-
-The 64x64 stage was trained for 50 epochs. The generated images now show significantly more detail and are beginning to look like plausible, albeit blurry, human faces.
-
-### Loss Curve
-
-![Loss Curve 64x64](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_64x64.png)
-
-### Sample Output
-
-![Sample 64x64 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/final_64x64.png)
-
-## Results: 128x128 Stage
-
-The 128x128 stage was trained for 60 epochs. The generated images are now clearly recognizable as faces, with distinct features and a high degree of coherence.
-
-### Loss Curve
-
-![Loss Curve 128x128](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_128x128.png)
-
-### Sample Output
-
-![Sample 128x128 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/final_128x128.png)
-
-## Results: 256x256 Stage
-
-The final 256x256 stage was trained for 70 epochs. The resulting images are the culmination of the progressive growing process, showing the most detail and coherence.
-
-### Loss Curve
-
-![Loss Curve 256x256](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/loss_curve_256x256.png)
-
-### Sample Output
-
-![Sample 256x256 Output](https://raw.githubusercontent.com/timlawrenz/glowing-tribble/main/examples/visualizations/final_256x256.png)

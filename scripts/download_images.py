@@ -23,8 +23,13 @@ def download_images(image_urls, output_dir):
             # A basic attempt to get a reasonable filename
             if '?' in filename:
                 filename = filename.split('?')[0]
+            
+            # Get the extension
+            extension = Path(filename).suffix
+            if not extension:
+                extension = ".jpg" # Default to jpg if no extension found
 
-            output_path = output_dir / f"download_{i+1:02d}_{filename}"
+            output_path = output_dir / f"download_{i+1:02d}{extension}"
             with open(output_path, 'wb') as f:
                 f.write(response.content)
             print(f"  - Successfully saved to {output_path}")

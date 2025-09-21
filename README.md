@@ -59,26 +59,31 @@ The project is broken down into four key milestones:
 3.  **Full-Resolution Generation:** Scale the generator to the full 256x256 resolution and verify its ability to produce visually coherent human faces.
 4.  **Initial Text-Conditioning:** Implement basic text-based control using CLIP to demonstrate the model's controllability.
 
-## Progress
+This PoC demonstrates a progressive generative model for creating 256x256 face images, guided by the semantic features of a frozen DINOv2 model.
 
-### Milestone 1: DINOv2 Feature Pyramid Pre-computation (Complete)
+### Milestone 1: Feature Pyramid Pre-computation
+- **Status:** ✅ Complete
+- **Description:** Implemented a data pipeline to download images, crop faces, and pre-compute DINOv2 feature pyramids at multiple scales (4x4, 8x8, 16x16). These pyramids serve as the ground truth for the generator.
+- **Result:** A set of `.pt` files, one for each image, containing the multi-scale feature embeddings.
 
-We have successfully built and validated the complete data preprocessing pipeline. This includes scripts to automatically download and crop test images, a core script to process them through DINOv2 to generate multi-scale feature pyramids, and a visualization script to confirm the results.
+*Pyramid Visualization for a Sample Image:*
+![Feature Pyramid Visualization](examples/visualizations/cropped_download_01.png)
 
-The visualizations show a clear semantic correspondence between the original image and its feature representations at different scales, validating our approach. For a detailed technical plan of this milestone, see **[docs/01-feature-pyramid.md](docs/01-feature-pyramid.md)**.
+### Milestone 2: Foundational Model Training
+- **Status:** ✅ Complete
+- **Description:** Developed and trained a progressive generator that learns to synthesize images by matching their DINOv2 feature pyramids to the pre-computed ones. The model was trained sequentially from 4x4 up to 256x256 resolution.
+- **Result:** A trained 256x256 generator model. The images below show the final output from the fixed evaluation noise vector at the end of the full training run.
 
-**Example Visualization:**
-*(Original Image | 4x4 Features | 8x8 Features | 16x16 Features)*
-![Example Visualization](examples/visualizations/test_image_01.png)
+*Final 256x256 Output:*
+![Final 256x256 Output](examples/visualizations/final_256x256.png)
 
-### Milestone 2: Foundational Model Training (Complete)
+*256x256 Loss Curve:*
+![256x256 Loss Curve](examples/visualizations/loss_curve_256x256.png)
 
-We have successfully trained the first stage of our progressive generator. By training on a small dataset of 5 images, we validated that the DINO-guided loss function works as intended. The model's loss decreased steadily, proving that the entire training pipeline—from data loading to backpropagation—is mechanically sound.
+### Milestone 3 & 4: Full-Resolution & Text Conditioning (Future Work)
+- **Status:** 📝 Planned
+- **Description:** Introduce a GAN discriminator to enforce photorealism and eliminate color artifacts. Explore conditioning the generator on text prompts for controlled image synthesis.
 
-This is a critical validation of our core hypothesis. For a detailed technical plan, see **[docs/02-foundational-model.md](docs/02-foundational-model.md)**.
-
-**Loss Curve for 4x4 Training:**
-![Loss Curve 4x4](examples/visualizations/loss_curve_4x4.png)
 
 ## Project Structure
 
