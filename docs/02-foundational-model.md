@@ -80,35 +80,35 @@ The model was trained successfully through all stages. The final images and loss
 ### 4x4 Stage
 | Final Image | Loss Curve |
 | :---: | :---: |
-| ![Final 4x4 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_4x4.png-428025565) | ![4x4 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_4x4.png-428025566) |
+| ![Final 4x4 Output](../examples/visualizations/final_4x4.png) | ![4x4 Loss Curve](../examples/visualizations/loss_curve_4x4.png) |
 
 ### 8x8 Stage
 | Final Image | Loss Curve |
 | :---: | :---: |
-| ![Final 8x8 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_8x8.png-428025567) | ![8x8 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_8x8.png-428025568) |
+| ![Final 8x8 Output](../examples/visualizations/final_8x8.png) | ![8x8 Loss Curve](../examples/visualizations/loss_curve_8x8.png) |
 
 ### 16x16 Stage
 | Final Image | Loss Curve |
 | :---: | :---: |
-| ![Final 16x16 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_16x16.png-428025569) | ![16x16 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_16x16.png-428025570) |
+| ![Final 16x16 Output](../examples/visualizations/final_16x16.png) | ![16x16 Loss Curve](../examples/visualizations/loss_curve_16x16.png) |
 
 ### 32x32 Stage
 | Final Image | Loss Curve |
 | :---: | :---: |
-| ![Final 32x32 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_32x32.png-428025571) | ![32x32 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_32x32.png-428025572) |
+| ![Final 32x32 Output](../examples/visualizations/final_32x32.png) | ![32x32 Loss Curve](../examples/visualizations/loss_curve_32x32.png) |
 
 ### 64x64 Stage
 | Final Image | Loss Curve |
 | :---: | :---: |
-| ![Final 64x64 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_64x64.png-428025573) | ![64x64 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_64x64.png-428025574) |
+| ![Final 64x64 Output](../examples/visualizations/final_64x64.png) | ![64x64 Loss Curve](../examples/visualizations/loss_curve_64x64.png) |
 
 ### 128x128 Stage
 | Final Image | Loss Curve |
 | :---: | :---: |
-| ![Final 128x128 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_128x128.png-428025575) | ![128x128 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_128x128.png-428025576) |
+| ![Final 128x128 Output](../examples/visualizations/final_128x128.png) | ![128x128 Loss Curve](../examples/visualizations/loss_curve_128x128.png) |
 
 ### 256x256 Stage
 | Final Image | Loss Curve |
 | :---: | :---: |
-| ![Final 256x256 Output](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_final_256x256.png-428025577) | ![256x256 Loss Curve](/.gemini-file-_home_tim_source_activity_glowing-tribble_examples_visualizations_loss_curve_256x256.png-428025578) |
+| ![Final 256x256 Output](../examples/visualizations/final_256x256.png) | ![256x256 Loss Curve](../examples/visualizations/loss_curve_256x256.png) |
 

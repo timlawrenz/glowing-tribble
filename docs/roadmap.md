@@ -17,14 +17,14 @@
         *   Visual inspection of the low-resolution outputs shows coherent "blobs" that correctly correspond to the general structure of a face (e.g., eye sockets, nose bridge).
     *   **Outcome:** A partially trained generator capable of producing structured, low-resolution face-like images. This validates the core hypothesis that DINO embeddings can replace a traditional GAN discriminator for guidance.
 
-*   **Milestone 3: Full-Resolution Generation and Visual Coherence**
-    *   **Objective:** To scale the generator to the full 256x256 resolution and verify that it can produce visually coherent, recognizable human faces.
+*   **Milestone 3: Target Resolution Generation (256x256) and Visual Coherence**
+    *   **Objective:** To scale the generator to the target 256x256 resolution and introduce a GAN discriminator to enforce photorealism, addressing the color-agnostic nature of the DINO-only loss.
     *   **Acceptance Criteria:**
         *   The progressive generator is fully implemented with all upscaling blocks to 256x256.
         *   The model is trained to produce full-resolution images that are visually inspected for quality.
         *   Generated images consistently show plausible human faces with correct anatomical features (two eyes, nose, mouth, etc.).
         *   Latent space interpolation between two random points produces a smooth, continuous transition between faces, proving the model has learned a meaningful representation.
-    *   **Outcome:** A trained generator that produces 256x256 pixel images of human faces, validating the viability of the progressive, DINO-guided approach for creating detailed images.
+    *   **Outcome:** A trained generator that produces photorealistic 256x256 pixel images of human faces, validating the hybrid DINO-guided + GAN approach.
 
 *   **Milestone 4: Initial Text-Conditioning with CLIP**
     *   **Objective:** To implement basic text-based control over the generated images, proving the model's architecture can be conditioned.
@@ -34,3 +34,11 @@
         *   The model can generate noticeably different outputs based on simple, high-level prompts (e.g., "a man's face," "a woman's face," "face with glasses").
         *   The generated images still maintain the high structural quality enforced by the DINO guidance.
     *   **Outcome:** A rudimentary text-to-image generator that demonstrates the model's controllability, setting the stage for more advanced conditioning techniques like cross-attention.
+
+*   **Milestone 5: Generalization Testing with FFHQ Dataset**
+    *   **Objective:** To test the robustness and generalization capability of the current model and training pipeline on a large-scale, high-quality dataset.
+    *   **Acceptance Criteria:**
+        *   The data preparation and training scripts are successfully run on a subset of the FFHQ dataset.
+        *   The model successfully trains to the 256x256 resolution without significant instability.
+        *   Visual inspection of the generated images shows that the model can produce a diverse range of coherent faces, confirming its ability to generalize beyond the initial PoC dataset.
+    *   **Outcome:** A trained 256x256 generator that has been validated on the FFHQ dataset, proving the scalability and robustness of the approach.
